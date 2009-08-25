@@ -1,31 +1,45 @@
+# TODO - not saving results.txt
+
 #!/usr/bin/env ruby
 
 ##################################
-###      CADalyzer 0.4         ###
+###      CADalyzer 0.54b       ###
 ###     Matthew D. Jordan      ###
 ###    www.scenic-shop.com     ###
 ### shared under the GNU GPLv3 ###
 ##################################
 
-# user variables
-wordlist = $0.to_s.chomp("Cadalyzer.rb") + "command_list.txt"
-path = "/Users/ra/Documents/Sandbox/Ruby/CADalyzer-support/logs 2"
-show_unused_commands = false
+=begin
+command line options
+  unused    -shows only unused commands
+  compile   -saves a compiled log to disk
+  results   -saves the results to disk
+  percent   -shows the results as percentage of the total number of command uses
+=end
+
+
+#Path to log file directory
+path = '/Users/ra/Sandbox/Ruby/CADalyzer/logs'
+
+
+# non-user variables
+command_list = $0.to_s.chomp("Cadalyzer.rb") + "command_list.txt"
+
+show_results = true
+show_percent = false
 write_compiled = false
 write_results = false
+show_unused = false
 
-# set some stuff
-require "date"
-require "time"
 working = Dir.pwd
 tempfile = String.new
 count = Hash.new
 $stderr.reopen $stdout
-
+@uber_total = 0
 
 ARGV.each do |a|
   if a == "unused"
-    show_unused_commands = true
+    show_unused = true
   end
   if a == "compile"
     write_compiled = true
@@ -33,7 +47,9 @@ ARGV.each do |a|
   if a == "results"
     write_results = true
   end
-
+  if a == "percent"
+    show_percent = true
+  end
 end
 
 
@@ -41,13 +57,13 @@ end
 ### check for required files ###
 ################################
 
-if not File.exist?(wordlist)
-  puts "Please enter a valid path to the wordlist:"
-  wordlist = gets.chomp
+if not File.exist?(command_list)
+  puts "Please puts the command_list.txt file in the same folder as this script & run script again."
 end
 
-# Copy wordlist to hash
-IO.read(wordlist).split.each do |i|
+
+# Copy command_list to hash
+IO.read(command_list).split.each do |i|
   count[i] = 0
 end
 
@@ -100,25 +116,50 @@ tempfile.each_line do |line|
   end
 end
 
-# delete keys from hash that do not have values
-if show_unused_commands == false
-  count.delete_if {|key, value| value == 0 }
-else   count.delete_if {|key, value| value != 0 }
+
+#count the uber total of commands
+count.each {|k,v| @uber_total = @uber_total + v  }
+
+#divide the values in the hash "count" by the @uber_total
+#store the values back into the hash
+
+if show_percent == true
+  count.each do |k,v|
+    count[k] = v.to_i * 100 / @uber_total.to_i 
+  end
+    puts "Commands as a % of the total commands executed:\n\n"
+  else
+    puts "Count of commands:\n\n"
 end
 
-# sort & print results
-count.sort{|a,b| b[1]<=>a[1]}.each do |v|
-  puts "#{v[1]}, #{v[0]}"
+
+# Show Unused Commands Switch
+# delete keys from hash that do not have values
+if show_unused == true
+  count.delete_if {|key, value| (value != 0) }
+else   count.delete_if {|key, value| value <= 0 }
 end
-puts "Number of commands used: " + count.length.to_s
+
+
+# show results
+if show_results == true  
+  count.sort{|a,b| b[1]<=>a[1]}.each do |v|
+    puts "#{v[1]}, #{v[0]}"
+  end
+end
+
+  puts "\nNumber of commands listed: " + count.length.to_s
 
 # save results to disk
 if write_results == true
-  open('results.txt', 'w') do |file|
-    file.puts "CADalyzer results calculated at " + Time.new.to_s + "\n\n"
-    count.sort{|a,b| b[1]<=>a[1]}.each do |v|
-      file.puts "#{v[1]}, #{v[0]}"
+    open('results.txt', 'w') do |file|
+      file.puts "CADalyzer results calculated at " + Time.new.to_s + "\n\n"
+      count.sort{|a,b| b[1]<=>a[1]}.each do |v|
+        file.puts "#{v[1]}, #{v[0]}"
+      end
     end
-  end
-  puts "Results have been saved to disk"
+    puts "Results have been saved to disk"
 end
+
+puts ""
+puts "Total number of command executions: #{@uber_total}"

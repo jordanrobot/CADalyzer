@@ -1,0 +1,6 @@
+Cadalyzer v 0.6
+
+Analysis of "logs 2" folder
+100 mb directory
+
+mean run time = 22.4 seconds
