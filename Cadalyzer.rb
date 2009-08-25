@@ -1,14 +1,14 @@
 #!/usr/bin/env ruby
 
 ##################################
-###      CADalyzer 0.3         ###
+###      CADalyzer 0.4         ###
 ###     Matthew D. Jordan      ###
 ###    www.scenic-shop.com     ###
 ### shared under the GNU GPLv3 ###
 ##################################
 
 # user variables
-wordlist = "command_list.txt"
+wordlist = $0.to_s.chomp("Cadalyzer.rb") + "command_list.txt"
 path = "/Users/ra/Documents/Sandbox/Ruby/CADalyzer-support/logs 2"
 show_unused_commands = false
 write_compiled = false
@@ -22,24 +22,20 @@ tempfile = String.new
 count = Hash.new
 $stderr.reopen $stdout
 
-# change the currently working path to the script directory
-
-starting_path = $0.to_s.chomp("Cadalyzer.rb")
-
-Dir.chdir(starting_path)
-
 
 ARGV.each do |a|
-  if a == "u"
+  if a == "unused"
     show_unused_commands = true
   end
-  if a == "c"
+  if a == "compile"
     write_compiled = true
   end
-  if a == "r"
+  if a == "results"
     write_results = true
   end
+
 end
+
 
 ################################
 ### check for required files ###
@@ -50,15 +46,16 @@ if not File.exist?(wordlist)
   wordlist = gets.chomp
 end
 
+# Copy wordlist to hash
+IO.read(wordlist).split.each do |i|
+  count[i] = 0
+end
+
 if not File.exist?(path)
   puts "Please enter a valid path to the log files:"
   path = gets.chomp
 end
 
-# Copy wordlist to hash
-IO.read(wordlist).split.each do |i|
-  count[i] = 0
-end
 
 #########################
 ### Compile Log Files ###
