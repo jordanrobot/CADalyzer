@@ -1,22 +1,14 @@
-# TODO - not saving results.txt
-
 #!/usr/bin/env ruby
 
 ##################################
-###      CADalyzer 0.54b       ###
+###         CADalyzer          ###
 ###     Matthew D. Jordan      ###
 ###    www.scenic-shop.com     ###
 ### shared under the GNU GPLv3 ###
 ##################################
+$version = "0.7"
 
-=begin
-command line options
-  unused    -shows only unused commands
-  compile   -saves a compiled log to disk
-  results   -saves the results to disk
-  percent   -shows the results as percentage of the total number of command uses
-=end
-
+require 'ostruct'
 
 #Path to log file directory
 path = '/Users/ra/Sandbox/Ruby/CADalyzer/logs'
@@ -25,11 +17,13 @@ path = '/Users/ra/Sandbox/Ruby/CADalyzer/logs'
 # non-user variables
 command_list = $0.to_s.chomp("Cadalyzer.rb") + "command_list.txt"
 
-show_results = true
-show_percent = false
-write_compiled = false
-write_results = false
-show_unused = false
+@op = OpenStruct.new
+
+@op.show_results = true
+#@op.show_percent = false
+#@op.write_compiled = false
+#@op.write_results = false
+#@op.show_unused = false
 
 working = Dir.pwd
 tempfile = String.new
@@ -39,23 +33,52 @@ $stderr.reopen $stdout
 
 ARGV.each do |a|
   if a == "unused"
-    show_unused = true
+    @op.show_unused = true
   end
   if a == "compile"
-    write_compiled = true
+    @op.write_compiled = true
   end
   if a == "results"
-    write_results = true
+    @op.write_results = true
   end
   if a == "percent"
-    show_percent = true
+    @op.show_percent = true
+  end
+  if a == "help"
+    @op.print_help = true
   end
 end
 
+def print_help
+  if @op.print_help == true
+  print "CADalyzer version #{$version}"
+
+  puts <<XXX
+  
+  
+CADalyzer is a stupid little utility to parse your Autocad log files
+and count the commands you have been using.
+
+Usage: Cadalyzer.rb <option>
+Options:
+  unused  - show unused commands
+  compile - save the compiled dataset to a file
+  write   - save the results to a file
+  percent - show commands in terms of relative percentages
+  help    - this screen here!
+
+Todo:
+  head <#>- show the top ___ number of commands
+  time    - show the delta percentages of commands over time 
+XXX
+    exit
+  end
+end
 
 ################################
 ### check for required files ###
 ################################
+print_help
 
 if not File.exist?(command_list)
   puts "Please puts the command_list.txt file in the same folder as this script & run script again."
@@ -92,7 +115,7 @@ end
 ### Write Compiled Log File ###
 ###############################
 
-if write_compiled == true
+if @op.write_compiled == true
   #Writes the tempfile var to the compiled logs file
   File.open("compiled.txt", 'w') do |f|
     f.write tempfile
@@ -108,12 +131,33 @@ end
 # TODO: @more efficient counting methods??
 Dir.chdir(working)
 tempfile.each_line do |line|
-  words = line.split
-  words.each do |w|
-    if count.has_key?(w)
-      count[w] += 1
+  if line.include? "Command:"
+    words = line.split
+    words.each do |w|
+      if count.has_key?(w)
+        count[w] += 1
+      end
+    end
+    @keep_nextline = true
+  end
+  if @keep_nextline == true
+    @keep_nextline = false
+    words = line.split
+    words.each do |w|
+      if count.has_key?(w)
+        count[w] += 1
+      end
     end
   end
+  
+
+#tempfile.each_line do |line|
+#  words = line.split
+#  words.each do |w|
+#    if count.has_key?(w)
+#      count[w] += 1
+#    end
+#  end
 end
 
 
@@ -123,26 +167,26 @@ count.each {|k,v| @uber_total = @uber_total + v  }
 #divide the values in the hash "count" by the @uber_total
 #store the values back into the hash
 
-if show_percent == true
+if @op.show_percent == true
   count.each do |k,v|
-    count[k] = v.to_i * 100 / @uber_total.to_i 
+    count[k] = v.to_i * 100 / @uber_total.to_i
+#    puts "#{count[k]} : #{k}"
   end
     puts "Commands as a % of the total commands executed:\n\n"
   else
     puts "Count of commands:\n\n"
 end
 
-
 # Show Unused Commands Switch
 # delete keys from hash that do not have values
-if show_unused == true
+if @op.show_unused == true
   count.delete_if {|key, value| (value != 0) }
 else   count.delete_if {|key, value| value <= 0 }
 end
 
 
 # show results
-if show_results == true  
+if @op.show_results == true  
   count.sort{|a,b| b[1]<=>a[1]}.each do |v|
     puts "#{v[1]}, #{v[0]}"
   end
@@ -151,7 +195,7 @@ end
   puts "\nNumber of commands listed: " + count.length.to_s
 
 # save results to disk
-if write_results == true
+if @op.write_results == true
     open('results.txt', 'w') do |file|
       file.puts "CADalyzer results calculated at " + Time.new.to_s + "\n\n"
       count.sort{|a,b| b[1]<=>a[1]}.each do |v|
